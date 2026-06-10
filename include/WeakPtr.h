@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <utility>
 
-template <typename T> class SharedPtr;
+#include "SharedPtr.h"
 
 template <typename T> class WeakPtr {
 public:
@@ -25,7 +25,7 @@ public:
 private:
   void release();
 
-  ControlBlock<T> *cb_;
+  ControlBlock<T> *cb_{nullptr};
 };
 
 template <typename T> WeakPtr<T>::WeakPtr() : cb_(nullptr) {}
@@ -70,7 +70,11 @@ template <typename T> WeakPtr<T> &WeakPtr<T>::operator=(const WeakPtr &other) {
 
 template <typename T>
 WeakPtr<T> &WeakPtr<T>::operator=(WeakPtr &&other) noexcept {
-  std::swap(cb_, other.cb_);
+  if (this != &other) {
+    release();
+    cb_ = other.cb_;
+    other.cb_ = nullptr;
+  }
   return *this;
 }
 

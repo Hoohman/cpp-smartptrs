@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ControlBlock.h"
+#include <cassert>
 #include <cstddef>
 #include <utility>
 
@@ -8,7 +9,7 @@ template <typename T> class WeakPtr;
 
 template <typename T> class SharedPtr {
 public:
-  SharedPtr(T *ptr = nullptr);
+  explicit SharedPtr(T *ptr = nullptr);
   SharedPtr(const SharedPtr &other);
   SharedPtr(SharedPtr &&other) noexcept;
   ~SharedPtr();
@@ -29,7 +30,7 @@ public:
 private:
   void release();
 
-  ControlBlock<T> *cb_;
+  ControlBlock<T> *cb_{nullptr};
 };
 
 template <typename T> SharedPtr<T>::SharedPtr(T *ptr) {
@@ -72,15 +73,25 @@ SharedPtr<T> &SharedPtr<T>::operator=(const SharedPtr &other) {
 
 template <typename T>
 SharedPtr<T> &SharedPtr<T>::operator=(SharedPtr &&other) noexcept {
-  std::swap(cb_, other.cb_);
+  if (this != &other) {
+    release();
+    cb_ = other.cb_;
+    other.cb_ = nullptr;
+  }
   return *this;
 }
 
 template <typename T> T &SharedPtr<T>::operator*() const {
+  assert(cb_ != nullptr && cb_->ptr_ != nullptr);
   return *(cb_->ptr_);
 }
 
-template <typename T> T *SharedPtr<T>::operator->() const { return cb_->ptr_; }
+template <typename T> T *SharedPtr<T>::operator->() const {
+  if (cb_ != nullptr) {
+    return cb_->ptr_;
+  }
+  return nullptr;
+}
 
 template <typename T> SharedPtr<T>::operator bool() const {
   return cb_ != nullptr && cb_->ptr_ != nullptr;
